@@ -1,4 +1,6 @@
 import os
+import time
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
@@ -18,8 +20,27 @@ NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
 NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "cybercorp123")
 
 driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
-app = FastAPI(title="CyberCorp Neo4j Attack Path Analysis")
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    wait_for_neo4j()
+    yield
+    driver.close()
+
+
+app = FastAPI(title="CyberCorp Neo4j Attack Path Analysis", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+
+def wait_for_neo4j(max_attempts: int = 30, delay: float = 2.0) -> None:
+    for _ in range(max_attempts):
+        try:
+            driver.verify_connectivity()
+            return
+        except ServiceUnavailable:
+            time.sleep(delay)
+    raise RuntimeError("Neo4j est indisponible apres plusieurs tentatives")
 
 
 def run_query(query: str, parameters: dict[str, Any] | None = None) -> list[dict[str, Any]]:
@@ -41,11 +62,6 @@ def run_cypher_file(path: Path) -> None:
             session.run(statement)
 
 
-@app.on_event("shutdown")
-def close_driver() -> None:
-    driver.close()
-
-
 @app.get("/")
 def index() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
@@ -65,6 +81,34 @@ def seed_graph() -> dict[str, str]:
         return {"status": "loaded"}
     except Neo4jError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.get("/api/stats")
+def stats() -> dict[str, Any]:
+    rows = run_query(
+        """
+        MATCH (n)
+        WITH labels(n)[0] AS label, count(n) AS total
+        ORDER BY label
+        RETURN collect({label: label, total: total}) AS nodes
+        """
+    )
+    rels = run_query(
+        """
+        MATCH ()-[r]->()
+        WITH type(r) AS type, count(r) AS total
+        ORDER BY type
+        RETURN collect({type: type, total: total}) AS relationships
+        """
+    )
+    node_counts = rows[0]["nodes"] if rows else []
+    rel_counts = rels[0]["relationships"] if rels else []
+    return {
+        "nodes": node_counts,
+        "relationships": rel_counts,
+        "totalNodes": sum(row["total"] for row in node_counts),
+        "totalRelationships": sum(row["total"] for row in rel_counts),
+    }
 
 
 @app.get("/api/graph")
@@ -103,6 +147,24 @@ def attack_paths() -> dict[str, list[dict[str, Any]]]:
     return {"paths": rows}
 
 
+@app.get("/api/shortest-paths")
+def shortest_paths() -> dict[str, list[dict[str, Any]]]:
+    rows = run_query(
+        """
+        MATCH (start:Machine {name: "PC-ALICE"}), (target:Machine)
+        WHERE target.criticality IN ["high", "critical"]
+        MATCH path = shortestPath((start)-[:CONNECTED_TO*1..5]->(target))
+        RETURN
+          target.name AS target,
+          target.criticality AS criticality,
+          [node IN nodes(path) | node.name] AS nodes,
+          length(path) AS hops
+        ORDER BY hops ASC, target.name
+        """
+    )
+    return {"paths": rows}
+
+
 @app.get("/api/vulnerable-machines")
 def vulnerable_machines() -> dict[str, list[dict[str, Any]]]:
     rows = run_query(
@@ -135,3 +197,64 @@ def reachable_resources() -> dict[str, list[dict[str, Any]]]:
         """
     )
     return {"resources": rows}
+
+
+@app.get("/api/exposed-services")
+def exposed_services() -> dict[str, list[dict[str, Any]]]:
+    rows = run_query(
+        """
+        MATCH (m:Machine)-[:EXPOSES]->(s:Service)
+        OPTIONAL MATCH (m)-[:HAS_VULNERABILITY]->(v:Vulnerability)
+        RETURN
+          m.name AS machine,
+          m.criticality AS criticality,
+          s.name AS service,
+          s.port AS port,
+          collect(v.cve) AS cves
+        ORDER BY m.name, s.port
+        """
+    )
+    return {"services": rows}
+
+
+@app.get("/api/identity-risks")
+def identity_risks() -> dict[str, list[dict[str, Any]]]:
+    rows = run_query(
+        """
+        MATCH (u:User)-[:MEMBER_OF]->(g:Group)-[:HAS_ACCESS_TO]->(m:Machine)
+        WHERE m.criticality IN ["high", "critical"]
+        RETURN
+          u.name AS user,
+          u.role AS role,
+          g.name AS group,
+          m.name AS machine,
+          m.criticality AS criticality
+        ORDER BY m.criticality DESC, user
+        """
+    )
+    admins = run_query(
+        """
+        MATCH (u:User)-[:ADMIN_OF]->(m:Machine)
+        RETURN u.name AS user, u.role AS role, m.name AS machine, m.criticality AS criticality
+        ORDER BY m.criticality DESC, user
+        """
+    )
+    return {"groupRisks": rows, "adminRights": admins}
+
+
+@app.get("/api/recommendations")
+def recommendations() -> dict[str, list[str]]:
+    return {
+        "recommendations": [
+            "Isoler les postes utilisateurs des serveurs critiques.",
+            "Limiter les connexions PC-ALICE -> SRV-WEB et SRV-WEB -> SRV-DB aux flux strictement necessaires.",
+            "Supprimer ou filtrer les connexions SRV-DB -> DC-01 et SRV-DB -> NAS-BACKUP.",
+            "Corriger Log4Shell et Spring4Shell sur SRV-WEB.",
+            "Corriger Zerologon sur DC-01.",
+            "Restreindre l'acces du groupe DEV a SRV-DB.",
+            "Appliquer le principe du moindre privilege aux groupes ADMINS, DEV et RH.",
+            "Desactiver les services inutiles et surveiller RDP, SMB, SSH, MongoDB, HTTP et HTTPS.",
+            "Activer MFA sur les comptes administrateurs.",
+            "Mettre en place une supervision des chemins d'attaque et des connexions laterales.",
+        ]
+    }

@@ -4,6 +4,10 @@ const seedButton = document.querySelector("#seed-button");
 const pathsElement = document.querySelector("#paths");
 const vulnerabilitiesElement = document.querySelector("#vulnerabilities");
 const resourcesElement = document.querySelector("#resources");
+const statsElement = document.querySelector("#stats");
+const servicesElement = document.querySelector("#services");
+const identityRisksElement = document.querySelector("#identity-risks");
+const recommendationsElement = document.querySelector("#recommendations");
 
 const colors = {
   User: "#2563eb",
@@ -21,6 +25,15 @@ async function api(path, options = {}) {
     throw new Error(payload.detail || "Erreur API");
   }
   return response.json();
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 function nodeLabel(node) {
@@ -76,41 +89,96 @@ function renderList(element, rows, emptyText, builder) {
     element.appendChild(item(emptyText, "Clique sur Charger le graphe si les donnees ne sont pas encore creees."));
     return;
   }
-  rows.forEach((row) => element.appendChild(builder(row)));
+  rows.forEach((row, index) => element.appendChild(builder(row, index)));
 }
 
 async function loadDashboard() {
-  const [graph, paths, vulnerableMachines, resources] = await Promise.all([
+  const [graph, stats, paths, shortestPaths, vulnerableMachines, resources, services, identityRisks, recommendations] = await Promise.all([
     api("/api/graph"),
+    api("/api/stats"),
     api("/api/attack-paths"),
+    api("/api/shortest-paths"),
     api("/api/vulnerable-machines"),
     api("/api/resources"),
+    api("/api/exposed-services"),
+    api("/api/identity-risks"),
+    api("/api/recommendations"),
   ]);
 
   renderGraph(graph);
+  renderStats(stats);
   renderList(pathsElement, paths.paths, "Aucun chemin trouve", (row) =>
     item(
-      `${row.target} <span class="badge">${row.criticality}</span>`,
-      `Chemin: ${row.nodes.join(" -> ")}<br>Nombre de sauts: ${row.hops}`,
+      `${escapeHtml(row.target)} <span class="badge">${escapeHtml(row.criticality)}</span>`,
+      `Chemin: ${escapeHtml(row.nodes.join(" -> "))}<br>Nombre de sauts: ${row.hops}`,
       row.criticality,
     ),
   );
 
+  shortestPaths.paths.forEach((row) => {
+    pathsElement.appendChild(
+      item(
+        `Plus court chemin vers ${escapeHtml(row.target)}`,
+        `${escapeHtml(row.nodes.join(" -> "))}<br>${row.hops} saut(s)`,
+        row.criticality,
+      ),
+    );
+  });
+
   renderList(vulnerabilitiesElement, vulnerableMachines.machines, "Aucune machine vulnerable trouvee", (row) =>
     item(
-      `${row.machine} - ${row.cve}`,
-      `${row.vulnerability}, score ${row.score}<br>Chemin: ${row.path.join(" -> ")}`,
+      `${escapeHtml(row.machine)} - ${escapeHtml(row.cve)}`,
+      `${escapeHtml(row.vulnerability)}, score ${row.score}<br>Chemin: ${escapeHtml(row.path.join(" -> "))}`,
       row.score >= 9 ? "critical" : "high",
     ),
   );
 
   renderList(resourcesElement, resources.resources, "Aucune ressource accessible trouvee", (row) =>
     item(
-      `${row.resource} <span class="badge">${row.sensitivity}</span>`,
-      `Hebergee sur ${row.machine}<br>Chemin: ${row.path.join(" -> ")}`,
+      `${escapeHtml(row.resource)} <span class="badge">${escapeHtml(row.sensitivity)}</span>`,
+      `Hebergee sur ${escapeHtml(row.machine)}<br>Chemin: ${escapeHtml(row.path.join(" -> "))}`,
       row.sensitivity === "critical" ? "critical" : "high",
     ),
   );
+
+  renderList(servicesElement, services.services, "Aucun service expose trouve", (row) =>
+    item(
+      `${escapeHtml(row.machine)}:${row.port}`,
+      `${escapeHtml(row.service)} - criticite machine: ${escapeHtml(row.criticality)}<br>Vulnerabilites liees: ${escapeHtml(row.cves.filter(Boolean).join(", ") || "aucune")}`,
+      row.criticality === "critical" ? "critical" : "",
+    ),
+  );
+
+  const identityRows = [
+    ...identityRisks.adminRights.map((row) => ({ ...row, type: "Admin direct" })),
+    ...identityRisks.groupRisks.map((row) => ({ ...row, type: `Groupe ${row.group}` })),
+  ];
+  renderList(identityRisksElement, identityRows, "Aucun risque d'identite trouve", (row) =>
+    item(
+      `${escapeHtml(row.user)} - ${escapeHtml(row.type)}`,
+      `${escapeHtml(row.role)} vers ${escapeHtml(row.machine)} (${escapeHtml(row.criticality)})`,
+      row.criticality === "critical" ? "critical" : "high",
+    ),
+  );
+
+  renderList(recommendationsElement, recommendations.recommendations, "Aucune recommandation", (text, index) =>
+    item(`Mesure ${index + 1}`, escapeHtml(text)),
+  );
+}
+
+function renderStats(stats) {
+  const cards = [
+    { label: "Noeuds", value: stats.totalNodes },
+    { label: "Relations", value: stats.totalRelationships },
+    ...stats.nodes.map((row) => ({ label: row.label, value: row.total })),
+  ];
+  statsElement.replaceChildren();
+  cards.forEach((card) => {
+    const div = document.createElement("div");
+    div.className = "stat";
+    div.innerHTML = `<strong>${card.value}</strong><span>${escapeHtml(card.label)}</span>`;
+    statsElement.appendChild(div);
+  });
 }
 
 seedButton.addEventListener("click", async () => {
@@ -131,4 +199,10 @@ seedButton.addEventListener("click", async () => {
 
 loadDashboard().catch((error) => {
   graphStatus.textContent = error.message;
+  renderList(pathsElement, [], "Graphe non charge", () => null);
+  renderList(vulnerabilitiesElement, [], "Graphe non charge", () => null);
+  renderList(resourcesElement, [], "Graphe non charge", () => null);
+  renderList(servicesElement, [], "Graphe non charge", () => null);
+  renderList(identityRisksElement, [], "Graphe non charge", () => null);
+  renderList(recommendationsElement, [], "Graphe non charge", () => null);
 });

@@ -12,7 +12,10 @@
         <p class="eyebrow">Projet B3 Cyber / Infra</p>
         <h1>CyberCorp Neo4j</h1>
       </div>
-      <button id="seed-button" type="button">Charger le graphe</button>
+      <div class="actions">
+        <a class="ghost-button" href="http://localhost:7474" target="_blank" rel="noreferrer">Neo4j Browser</a>
+        <button id="seed-button" type="button">Charger le graphe</button>
+      </div>
     </header>
 
     <main class="layout">
@@ -21,11 +24,12 @@
           <h2>Cartographie du systeme d'information</h2>
           <span id="graph-status">En attente</span>
         </div>
+        <div id="stats" class="stats"></div>
         <div id="graph" class="graph"></div>
       </section>
 
       <section class="panel">
-        <h2>Chemins d'attaque depuis PC-ALICE</h2>
+        <h2>Chemins d'attaque</h2>
         <div id="paths" class="list"></div>
       </section>
 
@@ -37,6 +41,21 @@
       <section class="panel">
         <h2>Ressources sensibles accessibles</h2>
         <div id="resources" class="list"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Services exposes</h2>
+        <div id="services" class="list compact-list"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Utilisateurs et groupes a risque</h2>
+        <div id="identity-risks" class="list compact-list"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Recommandations</h2>
+        <div id="recommendations" class="list compact-list"></div>
       </section>
     </main>
 
