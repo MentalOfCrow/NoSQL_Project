@@ -2,6 +2,8 @@ const graphElement = document.querySelector("#graph");
 const graphStatus = document.querySelector("#graph-status");
 const seedButton = document.querySelector("#seed-button");
 const exportButton = document.querySelector("#export-button");
+const applySegmentationButton = document.querySelector("#apply-segmentation-button");
+const resetSegmentationButton = document.querySelector("#reset-segmentation-button");
 const pathsElement = document.querySelector("#paths");
 const vulnerabilitiesElement = document.querySelector("#vulnerabilities");
 const resourcesElement = document.querySelector("#resources");
@@ -13,6 +15,7 @@ const queryCatalogElement = document.querySelector("#query-catalog");
 const queryResultsElement = document.querySelector("#query-results");
 const segmentationElement = document.querySelector("#segmentation");
 const diagnosticsElement = document.querySelector("#diagnostics");
+const segmentationStateElement = document.querySelector("#segmentation-state");
 const executiveSummaryElement = document.querySelector("#executive-summary");
 const riskMatrixElement = document.querySelector("#risk-matrix");
 const deliverablesElement = document.querySelector("#deliverables");
@@ -153,6 +156,7 @@ async function loadDashboard() {
     queryCatalog,
     queryResults,
     segmentation,
+    segmentationState,
     deliverables,
     diagnostics,
   ] = await Promise.all([
@@ -170,6 +174,7 @@ async function loadDashboard() {
     api("/api/query-catalog"),
     api("/api/query-results"),
     api("/api/segmentation-plan"),
+    api("/api/segmentation-state"),
     api("/api/deliverables"),
     api("/api/diagnostics"),
   ]);
@@ -239,6 +244,7 @@ async function loadDashboard() {
   renderQueryCatalog(queryCatalog.queries);
   renderQueryResults(queryResults.results);
   renderSegmentation(segmentation);
+  renderSegmentationState(segmentationState);
   renderRiskMatrix(riskMatrix.machines);
   renderDeliverables(deliverables.items);
 }
@@ -389,6 +395,16 @@ function renderSegmentation(segmentation) {
   });
 }
 
+function renderSegmentationState(state) {
+  const status = state.mode === "segmented" ? "Segmentation appliquee" : "Graphe initial";
+  const statusClass = state.mode === "segmented" ? "ok" : "warning";
+  segmentationStateElement.innerHTML = `
+    <span class="${statusClass}">${escapeHtml(status)}</span>
+    <span>Chemins critiques restants: ${state.criticalPathCount}</span>
+    <span>Flux controles: ${state.restrictedFlows.length}</span>
+  `;
+}
+
 async function exportDashboard() {
   const payload = await api("/api/export");
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
@@ -422,6 +438,44 @@ exportButton.addEventListener("click", () => {
   });
 });
 
+async function runSegmentationAction(button, action, loadingText, doneText) {
+  button.disabled = true;
+  const previousText = button.textContent;
+  button.textContent = loadingText;
+  graphStatus.textContent = loadingText;
+  try {
+    await api(action, { method: "POST" });
+    await loadDashboard();
+    button.textContent = doneText;
+    setTimeout(() => {
+      button.textContent = previousText;
+    }, 1400);
+  } catch (error) {
+    graphStatus.textContent = error.message;
+    button.textContent = previousText;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+applySegmentationButton.addEventListener("click", () => {
+  runSegmentationAction(
+    applySegmentationButton,
+    "/api/segmentation/apply",
+    "Application segmentation...",
+    "Segmentation appliquee",
+  );
+});
+
+resetSegmentationButton.addEventListener("click", () => {
+  runSegmentationAction(
+    resetSegmentationButton,
+    "/api/segmentation/reset",
+    "Restauration...",
+    "Graphe restaure",
+  );
+});
+
 function renderEmptyState(message = "Graphe non charge") {
   statsElement.replaceChildren();
   diagnosticsElement.innerHTML = `<span class="warning">Base non chargee</span>`;
@@ -436,6 +490,7 @@ function renderEmptyState(message = "Graphe non charge") {
   queryCatalogElement.replaceChildren();
   queryResultsElement.replaceChildren();
   segmentationElement.replaceChildren();
+  segmentationStateElement.replaceChildren();
   executiveSummaryElement.replaceChildren();
   riskMatrixElement.replaceChildren();
   deliverablesElement.replaceChildren();

@@ -15,6 +15,8 @@
       <div class="actions">
         <a class="ghost-button" href="http://localhost:7474" target="_blank" rel="noreferrer">Neo4j Browser</a>
         <button id="export-button" type="button">Exporter JSON</button>
+        <button id="apply-segmentation-button" type="button">Appliquer segmentation</button>
+        <button id="reset-segmentation-button" type="button">Restaurer initial</button>
         <button id="seed-button" type="button">Recharger le graphe</button>
       </div>
     </header>
@@ -85,6 +87,7 @@
 
       <section class="panel wide-panel">
         <h2>Comparaison avant / apres securisation</h2>
+        <div id="segmentation-state" class="diagnostics"></div>
         <div id="segmentation" class="segmentation-grid"></div>
       </section>
 

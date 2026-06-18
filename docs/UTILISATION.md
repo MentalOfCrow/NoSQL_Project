@@ -61,6 +61,7 @@ python scripts/load_data.py
 - requetes Cypher avec commentaires ;
 - resultats exploitables ;
 - comparaison avant/apres segmentation ;
+- simulation active de segmentation dans Neo4j ;
 - checklist des livrables ;
 - recommandations de securisation.
 
@@ -99,6 +100,7 @@ python scripts/load_from_csv.py
 - `reports/resultats_requetes.md` : resultats attendus des requetes.
 - `reports/presentation_orale.md` : trame pour la presentation.
 - `docs/RECETTE.md` : checklist de verification.
+- `cypher/04_apply_segmentation.cypher` : simulation de securisation reseau.
 
 ## Test rapide
 

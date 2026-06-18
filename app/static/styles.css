@@ -90,6 +90,14 @@ button {
   background: #334155;
 }
 
+.actions button:nth-of-type(2) {
+  background: #0f766e;
+}
+
+.actions button:nth-of-type(3) {
+  background: #b45309;
+}
+
 button:disabled {
   cursor: wait;
   opacity: 0.7;

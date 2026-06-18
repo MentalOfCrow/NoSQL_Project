@@ -1,4 +1,155 @@
-NoSQL_Project
+# NoSQL_Project
+
+Application Neo4j complete pour le projet B3 Cyber / Infra : cartographie d'un systeme d'information CyberCorp, analyse des chemins d'attaque depuis `PC-ALICE`, visualisation web, scripts Cypher, rapport, donnees CSV, export JSON et simulation de segmentation reseau.
+
+## Lancement rapide
+
+Prerequis :
+
+- Docker Desktop lance
+- Git
+- Navigateur web
+
+```powershell
+git clone https://github.com/MentalOfCrow/NoSQL_Project.git
+cd NoSQL_Project
+docker compose up --build
+```
+
+Ouvrir ensuite :
+
+- Application : http://localhost:8000
+- Neo4j Browser : http://localhost:7474
+
+Connexion Neo4j :
+
+```text
+Connect URL: bolt://localhost:7687
+Database: neo4j
+Username: neo4j
+Password: cybercorp123
+```
+
+L'application charge automatiquement le graphe si Neo4j est vide. Le bouton **Recharger le graphe** permet de recreer les donnees.
+
+## Fonctionnalites de l'application
+
+- visualisation interactive du graphe ;
+- filtres par type de noeud ;
+- synthese executive pour la presentation ;
+- chemins d'attaque depuis `PC-ALICE` ;
+- plus courts chemins vers les machines sensibles ;
+- ressources critiques accessibles ;
+- machines vulnerables ;
+- services exposes ;
+- utilisateurs et groupes a risque ;
+- matrice de risque par machine ;
+- catalogue de requetes Cypher avec bouton de copie ;
+- resultats exploitables et commentaires ;
+- comparaison avant/apres securisation ;
+- bouton **Appliquer segmentation** pour supprimer les chemins vers les machines critiques ;
+- bouton **Restaurer initial** pour revenir au graphe de depart ;
+- export JSON de l'analyse ;
+- checklist des livrables.
+
+## Verification rapide
+
+Quand l'application tourne :
+
+```powershell
+python scripts/smoke_test.py
+```
+
+Resultat attendu :
+
+```text
+OK: 31 noeuds, 41 relations
+```
+
+## Structure du depot
+
+```text
+app/                         Application FastAPI + interface web
+cypher/                      Scripts Neo4j
+  01_constraints.cypher
+  02_seed_graph.cypher
+  03_analysis_queries.cypher
+  04_apply_segmentation.cypher
+data/                        Donnees CSV bonus
+docs/                        Guide d'utilisation et recette
+reports/                     Rapport, resultats et presentation orale
+scripts/                     Scripts Python et PowerShell
+docker-compose.yml           Neo4j + application
+Dockerfile                   Image de l'application
+requirements.txt             Dependances Python
+```
+
+## Commandes utiles
+
+Demarrer :
+
+```powershell
+docker compose up --build
+```
+
+Arreter :
+
+```powershell
+docker compose down
+```
+
+Charger depuis Python :
+
+```powershell
+pip install -r requirements.txt
+python scripts/load_data.py
+```
+
+Charger depuis les CSV :
+
+```powershell
+python scripts/load_from_csv.py
+```
+
+## Requetes de demonstration
+
+Afficher tout le graphe :
+
+```cypher
+MATCH (n)
+RETURN n;
+```
+
+Chemins vers les machines critiques :
+
+```cypher
+MATCH path = (start:Machine {name: "PC-ALICE"})-[:CONNECTED_TO*1..5]->(target:Machine)
+WHERE target.criticality = "critical"
+RETURN path;
+```
+
+Machines vulnerables accessibles :
+
+```cypher
+MATCH path = (start:Machine {name: "PC-ALICE"})-[:CONNECTED_TO*1..5]->(m:Machine)-[:HAS_VULNERABILITY]->(v:Vulnerability)
+RETURN m.name AS machine, v.cve AS cve, v.name AS vulnerabilite, v.score AS score, path
+ORDER BY v.score DESC;
+```
+
+## Livrables
+
+- Graphe Neo4j : `cypher/01_constraints.cypher`, `cypher/02_seed_graph.cypher`
+- Requetes Cypher : `cypher/03_analysis_queries.cypher`
+- Segmentation bonus : `cypher/04_apply_segmentation.cypher`
+- Rapport cyber : `reports/analyse_cyber.md`
+- Resultats attendus : `reports/resultats_requetes.md`
+- Presentation orale : `reports/presentation_orale.md`
+- Guide d'utilisation : `docs/UTILISATION.md`
+- Recette fonctionnelle : `docs/RECETTE.md`
+
+---
+
+## Enonce du projet
 
 Projet B3 Cyber / Infra
 

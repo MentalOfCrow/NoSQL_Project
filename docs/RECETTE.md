@@ -67,6 +67,19 @@ Action : cliquer sur **Exporter JSON**.
 
 Resultat attendu : un fichier `cybercorp-analysis-export.json` est telecharge.
 
+## Verification avant / apres segmentation
+
+Action :
+
+1. dans l'application, cliquer sur **Appliquer segmentation** ;
+2. verifier que le nombre de chemins critiques restants passe a `0` ;
+3. cliquer sur **Restaurer initial** pour revenir au graphe de depart.
+
+Resultat attendu :
+
+- avant segmentation : chemins vers `DC-01` et `NAS-BACKUP` ;
+- apres segmentation : plus aucun chemin critique depuis `PC-ALICE`.
+
 ## Verification automatisee
 
 Commande :

@@ -143,6 +143,7 @@ def collect_dashboard_data() -> dict[str, Any]:
         "identityRisks": identity_risks(),
         "recommendations": recommendations(),
         "segmentation": segmentation_plan(),
+        "segmentationState": segmentation_state(),
         "deliverables": deliverables(),
         "queryCatalog": query_catalog(),
     }
@@ -185,6 +186,39 @@ def seed_graph() -> dict[str, str]:
     try:
         result = ensure_graph_loaded(force=True)
         return {"status": "loaded", **result}
+    except Neo4jError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.post("/api/segmentation/apply")
+def apply_segmentation() -> dict[str, Any]:
+    try:
+        result = run_query(
+            """
+            MATCH (web:Machine {name: "SRV-WEB"})-[webDb:CONNECTED_TO]->(db:Machine {name: "SRV-DB"})
+            SET webDb.status = "restricted", webDb.allowedPorts = [27017], webDb.note = "Flux applicatif strictement controle"
+            WITH db
+            OPTIONAL MATCH (db)-[toDomain:CONNECTED_TO]->(dc:Machine {name: "DC-01"})
+            DELETE toDomain
+            WITH db
+            OPTIONAL MATCH (db)-[toBackup:CONNECTED_TO]->(backup:Machine {name: "NAS-BACKUP"})
+            DELETE toBackup
+            WITH db
+            MATCH (pc:Machine {name: "PC-ALICE"})-[userWeb:CONNECTED_TO]->(web:Machine {name: "SRV-WEB"})
+            SET userWeb.status = "filtered", userWeb.note = "Acces utilisateur limite au frontal web"
+            RETURN "segmentation_applied" AS status
+            """
+        )
+        return {"status": "segmentation_applied", "result": result, "state": segmentation_state()}
+    except Neo4jError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.post("/api/segmentation/reset")
+def reset_segmentation() -> dict[str, Any]:
+    try:
+        result = ensure_graph_loaded(force=True)
+        return {"status": "initial_graph_restored", **result, "state": segmentation_state()}
     except Neo4jError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -425,6 +459,7 @@ def deliverables() -> dict[str, list[dict[str, str]]]:
             {"name": "Graphe Neo4j", "status": "pret", "file": "cypher/02_seed_graph.cypher"},
             {"name": "Contraintes Neo4j", "status": "pret", "file": "cypher/01_constraints.cypher"},
             {"name": "Requetes d'analyse", "status": "pret", "file": "cypher/03_analysis_queries.cypher"},
+            {"name": "Simulation de segmentation", "status": "pret", "file": "cypher/04_apply_segmentation.cypher"},
             {"name": "Rapport cyber", "status": "pret", "file": "reports/analyse_cyber.md"},
             {"name": "Resultats de requetes", "status": "pret", "file": "reports/resultats_requetes.md"},
             {"name": "Presentation orale", "status": "pret", "file": "reports/presentation_orale.md"},
@@ -513,6 +548,32 @@ def segmentation_plan() -> dict[str, Any]:
             "SRV-WEB reste expose uniquement sur HTTP/HTTPS controles.",
             "Les ressources critiques sont protegees par segmentation et moindre privilege.",
         ],
+    }
+
+
+@app.get("/api/segmentation-state")
+def segmentation_state() -> dict[str, Any]:
+    paths = run_query(
+        """
+        MATCH path = (start:Machine {name: "PC-ALICE"})-[:CONNECTED_TO*1..5]->(target:Machine)
+        WHERE target.criticality = "critical"
+        RETURN target.name AS target, [node IN nodes(path) | node.name] AS path, length(path) AS hops
+        ORDER BY target, hops
+        """
+    )
+    restricted = run_query(
+        """
+        MATCH (a:Machine)-[r:CONNECTED_TO]->(b:Machine)
+        WHERE r.status IS NOT NULL
+        RETURN a.name AS source, b.name AS target, r.status AS status, r.note AS note, r.allowedPorts AS allowedPorts
+        ORDER BY source, target
+        """
+    )
+    return {
+        "criticalPathCount": len(paths),
+        "criticalPaths": paths,
+        "restrictedFlows": restricted,
+        "mode": "segmented" if len(paths) == 0 and len(restricted) > 0 else "initial",
     }
 
 
