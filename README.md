@@ -441,6 +441,19 @@ CREATE (u)-[:MEMBER_OF]->(g);
 MATCH (u:User {name: "diana"}), (g:Group {name: "SECURITY"})
 CREATE (u)-[:MEMBER_OF]->(g);
 
+Correction de l'erreur de l'énoncé : associer les utilisateurs administrateurs aux machines
+
+Dans l'énoncé original, la relation `(:User)-[:ADMIN_OF]->(:Machine)` est demandée dans le modèle et utilisée dans les requêtes d'analyse, mais aucun exemple de création de cette relation n'est fourni. Le projet corrige cette omission avec les relations suivantes :
+
+MATCH (u:User {name: "charlie"}), (m:Machine {name: "DC-01"})
+CREATE (u)-[:ADMIN_OF]->(m);
+
+MATCH (u:User {name: "charlie"}), (m:Machine {name: "NAS-BACKUP"})
+CREATE (u)-[:ADMIN_OF]->(m);
+
+MATCH (u:User {name: "diana"}), (m:Machine {name: "SRV-WEB"})
+CREATE (u)-[:ADMIN_OF]->(m);
+
 Créer les connexions réseau
 
 MATCH (a:Machine {name: "PC-ALICE"}), (b:Machine {name: "SRV-WEB"})
