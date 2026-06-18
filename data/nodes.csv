@@ -1,0 +1,32 @@
+label,key,name,type,role,criticality,port,cve,score,description,sensitivity,riskScore,severity
+User,name,alice,,Employee RH,,,,,,,,
+User,name,bob,,Developpeur,,,,,,,,
+User,name,charlie,,Administrateur systeme,,,,,,,,
+User,name,diana,,RSSI,,,,,,,,
+User,name,eve,,Stagiaire,,,,,,,,
+Machine,name,PC-ALICE,workstation,,low,,,,,,30,
+Machine,name,PC-BOB,developer_workstation,,medium,,,,,,60,
+Machine,name,SRV-WEB,web_server,,medium,,,,,,85,
+Machine,name,SRV-DB,database,,high,,,,,,90,
+Machine,name,DC-01,domain_controller,,critical,,,,,,100,
+Machine,name,NAS-BACKUP,backup_server,,critical,,,,,,95,
+Service,name,SSH,,,,22,,,,,,
+Service,name,HTTP,,,,80,,,,,,
+Service,name,HTTPS,,,,443,,,,,,
+Service,name,RDP,,,,3389,,,,,,
+Service,name,SMB,,,,445,,,,,,
+Service,name,MongoDB,,,,27017,,,,,,
+Vulnerability,cve,Log4Shell,,,,,CVE-2021-44228,10,Execution de code a distance via Log4j,,,critical
+Vulnerability,cve,Zerologon,,,,,CVE-2020-1472,10,Elevation de privileges sur controleur de domaine,,,critical
+Vulnerability,cve,BlueKeep,,,,,CVE-2019-0708,9.8,Execution de code a distance via RDP,,,critical
+Vulnerability,cve,Spring4Shell,,,,,CVE-2022-22965,9.8,Execution de code a distance sur application Spring,,,critical
+Vulnerability,cve,SMB Misconfiguration,,,,,CVE-2023-0001,7.5,Mauvaise configuration du partage SMB,,,high
+Group,name,RH,,,,,,,Utilisateurs du service RH,,,
+Group,name,DEV,,,,,,,Equipe de developpement,,,
+Group,name,ADMINS,,,,,,,Administrateurs systeme,,,
+Group,name,SECURITY,,,,,,,Equipe securite,,,
+Resource,name,Base clients,,,,,,,,high,,
+Resource,name,Donnees RH,,,,,,,,high,,
+Resource,name,Active Directory,,,,,,,,critical,,
+Resource,name,Sauvegardes,,,,,,,,critical,,
+Resource,name,Secrets applicatifs,,,,,,,,critical,,

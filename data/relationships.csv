@@ -1,0 +1,42 @@
+startLabel,startKey,startValue,type,endLabel,endKey,endValue
+User,name,alice,USES,Machine,name,PC-ALICE
+User,name,bob,USES,Machine,name,PC-BOB
+User,name,charlie,USES,Machine,name,DC-01
+User,name,diana,USES,Machine,name,PC-BOB
+User,name,eve,USES,Machine,name,PC-ALICE
+User,name,alice,MEMBER_OF,Group,name,RH
+User,name,bob,MEMBER_OF,Group,name,DEV
+User,name,charlie,MEMBER_OF,Group,name,ADMINS
+User,name,diana,MEMBER_OF,Group,name,SECURITY
+User,name,eve,MEMBER_OF,Group,name,RH
+User,name,charlie,ADMIN_OF,Machine,name,DC-01
+User,name,charlie,ADMIN_OF,Machine,name,NAS-BACKUP
+User,name,diana,ADMIN_OF,Machine,name,SRV-WEB
+Machine,name,PC-ALICE,CONNECTED_TO,Machine,name,SRV-WEB
+Machine,name,PC-BOB,CONNECTED_TO,Machine,name,SRV-WEB
+Machine,name,SRV-WEB,CONNECTED_TO,Machine,name,SRV-DB
+Machine,name,SRV-DB,CONNECTED_TO,Machine,name,DC-01
+Machine,name,SRV-DB,CONNECTED_TO,Machine,name,NAS-BACKUP
+Machine,name,DC-01,CONNECTED_TO,Machine,name,NAS-BACKUP
+Machine,name,SRV-WEB,EXPOSES,Service,name,HTTP
+Machine,name,SRV-WEB,EXPOSES,Service,name,HTTPS
+Machine,name,SRV-WEB,EXPOSES,Service,name,SSH
+Machine,name,SRV-DB,EXPOSES,Service,name,MongoDB
+Machine,name,DC-01,EXPOSES,Service,name,SMB
+Machine,name,PC-BOB,EXPOSES,Service,name,RDP
+Machine,name,NAS-BACKUP,EXPOSES,Service,name,SMB
+Machine,name,SRV-WEB,HAS_VULNERABILITY,Vulnerability,cve,CVE-2021-44228
+Machine,name,SRV-WEB,HAS_VULNERABILITY,Vulnerability,cve,CVE-2022-22965
+Machine,name,PC-BOB,HAS_VULNERABILITY,Vulnerability,cve,CVE-2019-0708
+Machine,name,DC-01,HAS_VULNERABILITY,Vulnerability,cve,CVE-2020-1472
+Machine,name,NAS-BACKUP,HAS_VULNERABILITY,Vulnerability,cve,CVE-2023-0001
+Group,name,RH,HAS_ACCESS_TO,Machine,name,SRV-WEB
+Group,name,DEV,HAS_ACCESS_TO,Machine,name,SRV-DB
+Group,name,ADMINS,HAS_ACCESS_TO,Machine,name,DC-01
+Group,name,ADMINS,HAS_ACCESS_TO,Machine,name,NAS-BACKUP
+Group,name,SECURITY,HAS_ACCESS_TO,Machine,name,SRV-WEB
+Machine,name,SRV-DB,HOSTS,Resource,name,Base clients
+Machine,name,SRV-DB,HOSTS,Resource,name,Secrets applicatifs
+Machine,name,SRV-DB,HOSTS,Resource,name,Donnees RH
+Machine,name,DC-01,HOSTS,Resource,name,Active Directory
+Machine,name,NAS-BACKUP,HOSTS,Resource,name,Sauvegardes

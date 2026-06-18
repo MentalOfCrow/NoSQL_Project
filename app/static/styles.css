@@ -86,6 +86,10 @@ button {
   font-weight: 700;
 }
 
+.actions button:nth-of-type(1) {
+  background: #334155;
+}
+
 button:disabled {
   cursor: wait;
   opacity: 0.7;
@@ -104,6 +108,10 @@ button:disabled {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 8px;
+}
+
+.wide-panel {
+  grid-column: 1 / -1;
 }
 
 .graph-panel {
@@ -164,6 +172,51 @@ button:disabled {
   max-height: 340px;
   overflow: auto;
   padding-right: 3px;
+}
+
+.query-grid,
+.result-grid,
+.segmentation-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.query-card {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fbfcff;
+}
+
+.query-card strong {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.query-card p,
+.query-card li {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.query-card ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+pre {
+  overflow: auto;
+  max-height: 220px;
+  margin: 0 0 10px;
+  padding: 10px;
+  border-radius: 6px;
+  background: #101827;
+  color: #e2e8f0;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .item {

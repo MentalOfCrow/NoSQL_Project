@@ -14,6 +14,7 @@
       </div>
       <div class="actions">
         <a class="ghost-button" href="http://localhost:7474" target="_blank" rel="noreferrer">Neo4j Browser</a>
+        <button id="export-button" type="button">Exporter JSON</button>
         <button id="seed-button" type="button">Charger le graphe</button>
       </div>
     </header>
@@ -56,6 +57,21 @@
       <section class="panel">
         <h2>Recommandations</h2>
         <div id="recommendations" class="list compact-list"></div>
+      </section>
+
+      <section class="panel wide-panel">
+        <h2>Requetes Cypher et commentaires</h2>
+        <div id="query-catalog" class="query-grid"></div>
+      </section>
+
+      <section class="panel wide-panel">
+        <h2>Resultats exploitables</h2>
+        <div id="query-results" class="result-grid"></div>
+      </section>
+
+      <section class="panel wide-panel">
+        <h2>Comparaison avant / apres securisation</h2>
+        <div id="segmentation" class="segmentation-grid"></div>
       </section>
     </main>
 

@@ -1,6 +1,7 @@
 const graphElement = document.querySelector("#graph");
 const graphStatus = document.querySelector("#graph-status");
 const seedButton = document.querySelector("#seed-button");
+const exportButton = document.querySelector("#export-button");
 const pathsElement = document.querySelector("#paths");
 const vulnerabilitiesElement = document.querySelector("#vulnerabilities");
 const resourcesElement = document.querySelector("#resources");
@@ -8,6 +9,9 @@ const statsElement = document.querySelector("#stats");
 const servicesElement = document.querySelector("#services");
 const identityRisksElement = document.querySelector("#identity-risks");
 const recommendationsElement = document.querySelector("#recommendations");
+const queryCatalogElement = document.querySelector("#query-catalog");
+const queryResultsElement = document.querySelector("#query-results");
+const segmentationElement = document.querySelector("#segmentation");
 
 const colors = {
   User: "#2563eb",
@@ -93,7 +97,20 @@ function renderList(element, rows, emptyText, builder) {
 }
 
 async function loadDashboard() {
-  const [graph, stats, paths, shortestPaths, vulnerableMachines, resources, services, identityRisks, recommendations] = await Promise.all([
+  const [
+    graph,
+    stats,
+    paths,
+    shortestPaths,
+    vulnerableMachines,
+    resources,
+    services,
+    identityRisks,
+    recommendations,
+    queryCatalog,
+    queryResults,
+    segmentation,
+  ] = await Promise.all([
     api("/api/graph"),
     api("/api/stats"),
     api("/api/attack-paths"),
@@ -103,6 +120,9 @@ async function loadDashboard() {
     api("/api/exposed-services"),
     api("/api/identity-risks"),
     api("/api/recommendations"),
+    api("/api/query-catalog"),
+    api("/api/query-results"),
+    api("/api/segmentation-plan"),
   ]);
 
   renderGraph(graph);
@@ -164,6 +184,10 @@ async function loadDashboard() {
   renderList(recommendationsElement, recommendations.recommendations, "Aucune recommandation", (text, index) =>
     item(`Mesure ${index + 1}`, escapeHtml(text)),
   );
+
+  renderQueryCatalog(queryCatalog.queries);
+  renderQueryResults(queryResults.results);
+  renderSegmentation(segmentation);
 }
 
 function renderStats(stats) {
@@ -179,6 +203,64 @@ function renderStats(stats) {
     div.innerHTML = `<strong>${card.value}</strong><span>${escapeHtml(card.label)}</span>`;
     statsElement.appendChild(div);
   });
+}
+
+function renderQueryCatalog(queries) {
+  queryCatalogElement.replaceChildren();
+  queries.forEach((query) => {
+    const article = document.createElement("article");
+    article.className = "query-card";
+    article.innerHTML = `
+      <strong>${escapeHtml(query.title)}</strong>
+      <pre><code>${escapeHtml(query.query)}</code></pre>
+      <p>${escapeHtml(query.comment)}</p>
+    `;
+    queryCatalogElement.appendChild(article);
+  });
+}
+
+function renderQueryResults(results) {
+  queryResultsElement.replaceChildren();
+  results.forEach((result) => {
+    const article = document.createElement("article");
+    article.className = "query-card";
+    const rows = result.rows.slice(0, 8).map((row) => `<li>${escapeHtml(JSON.stringify(row))}</li>`).join("");
+    article.innerHTML = `
+      <strong>${escapeHtml(result.title)}</strong>
+      <p>${escapeHtml(result.comment)}</p>
+      <ul>${rows || "<li>Aucun resultat</li>"}</ul>
+    `;
+    queryResultsElement.appendChild(article);
+  });
+}
+
+function renderSegmentation(segmentation) {
+  const columns = [
+    ["Avant", segmentation.before],
+    ["Actions", segmentation.actions],
+    ["Apres", segmentation.after],
+  ];
+  segmentationElement.replaceChildren();
+  columns.forEach(([title, rows]) => {
+    const article = document.createElement("article");
+    article.className = "query-card";
+    article.innerHTML = `
+      <strong>${escapeHtml(title)}</strong>
+      <ul>${rows.map((row) => `<li>${escapeHtml(row)}</li>`).join("")}</ul>
+    `;
+    segmentationElement.appendChild(article);
+  });
+}
+
+async function exportDashboard() {
+  const payload = await api("/api/export");
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "cybercorp-analysis-export.json";
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 seedButton.addEventListener("click", async () => {
@@ -197,6 +279,12 @@ seedButton.addEventListener("click", async () => {
   }
 });
 
+exportButton.addEventListener("click", () => {
+  exportDashboard().catch((error) => {
+    graphStatus.textContent = error.message;
+  });
+});
+
 loadDashboard().catch((error) => {
   graphStatus.textContent = error.message;
   renderList(pathsElement, [], "Graphe non charge", () => null);
@@ -205,4 +293,7 @@ loadDashboard().catch((error) => {
   renderList(servicesElement, [], "Graphe non charge", () => null);
   renderList(identityRisksElement, [], "Graphe non charge", () => null);
   renderList(recommendationsElement, [], "Graphe non charge", () => null);
+  queryCatalogElement.replaceChildren();
+  queryResultsElement.replaceChildren();
+  segmentationElement.replaceChildren();
 });

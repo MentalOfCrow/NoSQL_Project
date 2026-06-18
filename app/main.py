@@ -21,6 +21,45 @@ NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "cybercorp123")
 
 driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
 
+ANALYSIS_QUERIES = [
+    {
+        "id": "all_graph",
+        "title": "Afficher tout le graphe",
+        "query": "MATCH (n) RETURN n;",
+        "comment": "Permet de verifier que tous les noeuds du systeme d'information sont presents dans Neo4j.",
+    },
+    {
+        "id": "critical_machines",
+        "title": "Machines critiques",
+        "query": 'MATCH (m:Machine) WHERE m.criticality = "critical" RETURN m.name AS machine, m.type AS type;',
+        "comment": "Identifie les actifs les plus sensibles : le controleur de domaine et les sauvegardes.",
+    },
+    {
+        "id": "vulnerable_machines",
+        "title": "Machines vulnerables",
+        "query": "MATCH (m:Machine)-[:HAS_VULNERABILITY]->(v:Vulnerability) RETURN m.name AS machine, v.cve AS cve, v.name AS vulnerabilite, v.score AS score ORDER BY v.score DESC;",
+        "comment": "Classe les faiblesses techniques par score CVSS afin de prioriser les corrections.",
+    },
+    {
+        "id": "attack_paths",
+        "title": "Chemins vers les machines critiques",
+        "query": 'MATCH path = (start:Machine {name: "PC-ALICE"})-[:CONNECTED_TO*1..5]->(target:Machine) WHERE target.criticality = "critical" RETURN path;',
+        "comment": "Montre les chemins de deplacement lateral possibles depuis le poste compromis.",
+    },
+    {
+        "id": "reachable_resources",
+        "title": "Ressources accessibles depuis PC-ALICE",
+        "query": 'MATCH path = (start:Machine {name: "PC-ALICE"})-[:CONNECTED_TO*1..5]->(m:Machine)-[:HOSTS]->(r:Resource) RETURN r.name AS ressource, r.sensitivity AS sensibilite, m.name AS machine, path ORDER BY r.sensitivity DESC;',
+        "comment": "Liste les donnees sensibles qui deviennent atteignables depuis le poste compromis.",
+    },
+    {
+        "id": "risky_groups",
+        "title": "Utilisateurs et groupes a risque",
+        "query": 'MATCH (u:User)-[:MEMBER_OF]->(g:Group)-[:HAS_ACCESS_TO]->(m:Machine) WHERE m.criticality IN ["high", "critical"] RETURN u.name AS utilisateur, g.name AS groupe, m.name AS machine, m.criticality AS criticite;',
+        "comment": "Met en evidence les droits de groupe trop permissifs sur les serveurs sensibles.",
+    },
+]
+
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
@@ -60,6 +99,22 @@ def run_cypher_file(path: Path) -> None:
     with driver.session() as session:
         for statement in statements:
             session.run(statement)
+
+
+def collect_dashboard_data() -> dict[str, Any]:
+    return {
+        "stats": stats(),
+        "graph": graph(),
+        "attackPaths": attack_paths(),
+        "shortestPaths": shortest_paths(),
+        "vulnerableMachines": vulnerable_machines(),
+        "resources": reachable_resources(),
+        "exposedServices": exposed_services(),
+        "identityRisks": identity_risks(),
+        "recommendations": recommendations(),
+        "segmentation": segmentation_plan(),
+        "queryCatalog": query_catalog(),
+    }
 
 
 @app.get("/")
@@ -258,3 +313,89 @@ def recommendations() -> dict[str, list[str]]:
             "Mettre en place une supervision des chemins d'attaque et des connexions laterales.",
         ]
     }
+
+
+@app.get("/api/query-catalog")
+def query_catalog() -> dict[str, list[dict[str, str]]]:
+    return {"queries": ANALYSIS_QUERIES}
+
+
+@app.get("/api/query-results")
+def query_results() -> dict[str, list[dict[str, Any]]]:
+    return {
+        "results": [
+            {
+                "title": "Utilisateurs et machines",
+                "comment": "Chaque utilisateur est rattache a une machine de travail.",
+                "rows": run_query(
+                    """
+                    MATCH (u:User)-[:USES]->(m:Machine)
+                    RETURN u.name AS utilisateur, m.name AS machine
+                    ORDER BY utilisateur
+                    """
+                ),
+            },
+            {
+                "title": "Machines critiques",
+                "comment": "DC-01 et NAS-BACKUP sont les machines dont la compromission aurait le plus d'impact.",
+                "rows": run_query(
+                    """
+                    MATCH (m:Machine)
+                    WHERE m.criticality = "critical"
+                    RETURN m.name AS machine, m.type AS type, m.riskScore AS score_risque
+                    ORDER BY score_risque DESC
+                    """
+                ),
+            },
+            {
+                "title": "Vulnerabilites prioritaires",
+                "comment": "Les scores les plus eleves doivent etre corriges en premier.",
+                "rows": run_query(
+                    """
+                    MATCH (m:Machine)-[:HAS_VULNERABILITY]->(v:Vulnerability)
+                    RETURN m.name AS machine, v.cve AS cve, v.name AS vulnerabilite, v.score AS score
+                    ORDER BY v.score DESC
+                    """
+                ),
+            },
+            {
+                "title": "Services exposes",
+                "comment": "Les services exposes augmentent la surface d'attaque.",
+                "rows": run_query(
+                    """
+                    MATCH (m:Machine)-[:EXPOSES]->(s:Service)
+                    RETURN m.name AS machine, s.name AS service, s.port AS port
+                    ORDER BY machine, port
+                    """
+                ),
+            },
+        ]
+    }
+
+
+@app.get("/api/segmentation-plan")
+def segmentation_plan() -> dict[str, Any]:
+    return {
+        "before": [
+            "PC-ALICE -> SRV-WEB -> SRV-DB -> DC-01",
+            "PC-ALICE -> SRV-WEB -> SRV-DB -> NAS-BACKUP",
+            "PC-ALICE -> SRV-WEB -> SRV-DB -> DC-01 -> NAS-BACKUP",
+        ],
+        "actions": [
+            "Bloquer les flux directs des postes utilisateurs vers les serveurs internes hors proxy applicatif.",
+            "Limiter SRV-WEB -> SRV-DB au seul port applicatif necessaire.",
+            "Interdire SRV-DB -> DC-01 sauf flux Active Directory strictement justifies.",
+            "Isoler NAS-BACKUP dans un VLAN de sauvegarde non joignable depuis les serveurs applicatifs.",
+            "Restreindre DEV sur SRV-DB et separer les privileges d'administration.",
+        ],
+        "after": [
+            "PC-ALICE ne peut plus atteindre directement SRV-DB, DC-01 ou NAS-BACKUP.",
+            "SRV-WEB reste expose uniquement sur HTTP/HTTPS controles.",
+            "Les ressources critiques sont protegees par segmentation et moindre privilege.",
+        ],
+    }
+
+
+@app.get("/api/export")
+def export() -> dict[str, Any]:
+    return collect_dashboard_data()
