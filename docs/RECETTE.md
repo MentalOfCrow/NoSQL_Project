@@ -93,3 +93,20 @@ Resultat attendu :
 ```text
 OK: 31 noeuds, 41 relations
 ```
+
+## Verification du bonus CSV/Python
+
+Commande :
+
+```powershell
+python scripts/load_from_csv.py --clear
+```
+
+Resultat attendu :
+
+```text
+Import CSV termine.
+Noeuds lus depuis CSV: 31
+Relations lues depuis CSV: 41
+Graphe Neo4j: 31 noeuds, 41 relations
+```

@@ -87,6 +87,8 @@ Le groupe `ADMINS` a acces a `DC-01` et `NAS-BACKUP`. Une compromission d'un com
 4. Montrer le graphe.
 5. Montrer les chemins depuis `PC-ALICE`.
 6. Ouvrir Neo4j Browser et executer les requetes Cypher.
+7. Montrer le bonus CSV/Python avec `python scripts/load_from_csv.py --clear`.
+8. Montrer la segmentation avec **Appliquer segmentation**.
 
 ## 9. Conclusion
 

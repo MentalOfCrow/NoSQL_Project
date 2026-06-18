@@ -108,8 +108,10 @@ python scripts/load_data.py
 Charger depuis les CSV :
 
 ```powershell
-python scripts/load_from_csv.py
+python scripts/load_from_csv.py --clear
 ```
+
+Le bonus CSV/Python est documente dans `docs/IMPORT_CSV.md`. Le script lit `data/nodes.csv` et `data/relationships.csv`, cree les contraintes Neo4j, valide les labels/relations, insere les noeuds, cree les relations et affiche un bilan d'import.
 
 ## Requetes de demonstration
 
@@ -146,6 +148,7 @@ ORDER BY v.score DESC;
 - Presentation orale : `reports/presentation_orale.md`
 - Guide d'utilisation : `docs/UTILISATION.md`
 - Recette fonctionnelle : `docs/RECETTE.md`
+- Import automatique CSV/Python : `docs/IMPORT_CSV.md`
 
 ---
 

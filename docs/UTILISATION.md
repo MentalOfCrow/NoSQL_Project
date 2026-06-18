@@ -91,8 +91,10 @@ Pour charger Neo4j depuis les CSV :
 
 ```powershell
 pip install -r requirements.txt
-python scripts/load_from_csv.py
+python scripts/load_from_csv.py --clear
 ```
+
+Le script affiche le nombre de noeuds et relations importes. Documentation detaillee : `docs/IMPORT_CSV.md`.
 
 ## Fichiers de rendu
 
@@ -101,6 +103,7 @@ python scripts/load_from_csv.py
 - `reports/presentation_orale.md` : trame pour la presentation.
 - `docs/RECETTE.md` : checklist de verification.
 - `cypher/04_apply_segmentation.cypher` : simulation de securisation reseau.
+- `docs/IMPORT_CSV.md` : import automatique CSV avec Python.
 
 ## Test rapide
 
