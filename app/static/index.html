@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CyberCorp - Analyse Neo4j</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Projet B3 Cyber / Infra</p>
+        <h1>CyberCorp Neo4j</h1>
+      </div>
+      <button id="seed-button" type="button">Charger le graphe</button>
+    </header>
+
+    <main class="layout">
+      <section class="panel graph-panel">
+        <div class="section-title">
+          <h2>Cartographie du systeme d'information</h2>
+          <span id="graph-status">En attente</span>
+        </div>
+        <div id="graph" class="graph"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Chemins d'attaque depuis PC-ALICE</h2>
+        <div id="paths" class="list"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Machines vulnerables accessibles</h2>
+        <div id="vulnerabilities" class="list"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Ressources sensibles accessibles</h2>
+        <div id="resources" class="list"></div>
+      </section>
+    </main>
+
+    <script src="https://unpkg.com/vis-network@9.1.9/dist/vis-network.min.js"></script>
+    <script src="/static/script.js"></script>
+  </body>
+</html>

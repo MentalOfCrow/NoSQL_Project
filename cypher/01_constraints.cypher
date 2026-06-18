@@ -1,0 +1,17 @@
+CREATE CONSTRAINT user_name IF NOT EXISTS
+FOR (u:User) REQUIRE u.name IS UNIQUE;
+
+CREATE CONSTRAINT machine_name IF NOT EXISTS
+FOR (m:Machine) REQUIRE m.name IS UNIQUE;
+
+CREATE CONSTRAINT service_name IF NOT EXISTS
+FOR (s:Service) REQUIRE s.name IS UNIQUE;
+
+CREATE CONSTRAINT vulnerability_cve IF NOT EXISTS
+FOR (v:Vulnerability) REQUIRE v.cve IS UNIQUE;
+
+CREATE CONSTRAINT group_name IF NOT EXISTS
+FOR (g:Group) REQUIRE g.name IS UNIQUE;
+
+CREATE CONSTRAINT resource_name IF NOT EXISTS
+FOR (r:Resource) REQUIRE r.name IS UNIQUE;
