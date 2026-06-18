@@ -15,17 +15,26 @@
       <div class="actions">
         <a class="ghost-button" href="http://localhost:7474" target="_blank" rel="noreferrer">Neo4j Browser</a>
         <button id="export-button" type="button">Exporter JSON</button>
-        <button id="seed-button" type="button">Charger le graphe</button>
+        <button id="seed-button" type="button">Recharger le graphe</button>
       </div>
     </header>
 
     <main class="layout">
+      <section class="panel wide-panel summary-panel">
+        <div>
+          <h2>Synthese executive</h2>
+          <div id="executive-summary" class="summary-grid"></div>
+        </div>
+      </section>
+
       <section class="panel graph-panel">
         <div class="section-title">
           <h2>Cartographie du systeme d'information</h2>
           <span id="graph-status">En attente</span>
         </div>
+        <div id="diagnostics" class="diagnostics"></div>
         <div id="stats" class="stats"></div>
+        <div id="graph-filters" class="filters"></div>
         <div id="graph" class="graph"></div>
       </section>
 
@@ -60,6 +69,11 @@
       </section>
 
       <section class="panel wide-panel">
+        <h2>Matrice de risque par machine</h2>
+        <div id="risk-matrix" class="risk-grid"></div>
+      </section>
+
+      <section class="panel wide-panel">
         <h2>Requetes Cypher et commentaires</h2>
         <div id="query-catalog" class="query-grid"></div>
       </section>
@@ -72,6 +86,11 @@
       <section class="panel wide-panel">
         <h2>Comparaison avant / apres securisation</h2>
         <div id="segmentation" class="segmentation-grid"></div>
+      </section>
+
+      <section class="panel wide-panel">
+        <h2>Checklist des livrables</h2>
+        <div id="deliverables" class="deliverable-grid"></div>
       </section>
     </main>
 

@@ -18,7 +18,7 @@ Resultat attendu :
 Action :
 
 1. ouvrir `http://localhost:8000` ;
-2. cliquer sur **Charger le graphe**.
+2. attendre l'auto-chargement ou cliquer sur **Recharger le graphe**.
 
 Resultat attendu :
 
@@ -66,3 +66,17 @@ Resultat attendu :
 Action : cliquer sur **Exporter JSON**.
 
 Resultat attendu : un fichier `cybercorp-analysis-export.json` est telecharge.
+
+## Verification automatisee
+
+Commande :
+
+```powershell
+python scripts/smoke_test.py
+```
+
+Resultat attendu :
+
+```text
+OK: 31 noeuds, 41 relations
+```

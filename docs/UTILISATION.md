@@ -27,7 +27,9 @@ neo4j / cybercorp123
 
 ## Charger le graphe
 
-Dans l'application, cliquer sur **Charger le graphe**.
+Au demarrage, l'application charge automatiquement le graphe si la base Neo4j est vide.
+
+Il est aussi possible de cliquer sur **Recharger le graphe** pour supprimer puis recreer toutes les donnees.
 
 Le bouton execute automatiquement :
 
@@ -45,8 +47,11 @@ python scripts/load_data.py
 
 ## Ce que montre l'application
 
+- synthese executive pour la presentation ;
 - cartographie visuelle du graphe ;
+- filtres par type de noeud ;
 - nombre de noeuds et relations ;
+- matrice de risque par machine ;
 - chemins d'attaque depuis `PC-ALICE` ;
 - plus courts chemins vers les machines sensibles ;
 - ressources critiques accessibles ;
@@ -56,6 +61,7 @@ python scripts/load_data.py
 - requetes Cypher avec commentaires ;
 - resultats exploitables ;
 - comparaison avant/apres segmentation ;
+- checklist des livrables ;
 - recommandations de securisation.
 
 ## Exporter les resultats
@@ -93,6 +99,20 @@ python scripts/load_from_csv.py
 - `reports/resultats_requetes.md` : resultats attendus des requetes.
 - `reports/presentation_orale.md` : trame pour la presentation.
 - `docs/RECETTE.md` : checklist de verification.
+
+## Test rapide
+
+Quand Docker est lance :
+
+```powershell
+python scripts/smoke_test.py
+```
+
+Resultat attendu :
+
+```text
+OK: 31 noeuds, 41 relations
+```
 
 ## Commandes Git utiles
 

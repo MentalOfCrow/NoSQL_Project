@@ -12,6 +12,15 @@ const recommendationsElement = document.querySelector("#recommendations");
 const queryCatalogElement = document.querySelector("#query-catalog");
 const queryResultsElement = document.querySelector("#query-results");
 const segmentationElement = document.querySelector("#segmentation");
+const diagnosticsElement = document.querySelector("#diagnostics");
+const executiveSummaryElement = document.querySelector("#executive-summary");
+const riskMatrixElement = document.querySelector("#risk-matrix");
+const deliverablesElement = document.querySelector("#deliverables");
+const graphFiltersElement = document.querySelector("#graph-filters");
+
+let fullGraphPayload = { nodes: [], relationships: [] };
+let visibleLabels = new Set();
+let network = null;
 
 const colors = {
   User: "#2563eb",
@@ -45,7 +54,17 @@ function nodeLabel(node) {
 }
 
 function renderGraph(payload) {
-  const nodes = payload.nodes.map((node) => {
+  fullGraphPayload = payload;
+  if (!visibleLabels.size) {
+    visibleLabels = new Set([...new Set(payload.nodes.map((node) => node.labels[0] || "Node"))]);
+  }
+  renderGraphFilters(payload);
+  const visibleNodeIds = new Set(
+    payload.nodes
+      .filter((node) => visibleLabels.has(node.labels[0] || "Node"))
+      .map((node) => node.id),
+  );
+  const nodes = payload.nodes.filter((node) => visibleNodeIds.has(node.id)).map((node) => {
     const label = node.labels[0] || "Node";
     return {
       id: node.id,
@@ -57,17 +76,19 @@ function renderGraph(payload) {
     };
   });
 
-  const edges = payload.relationships.map((relationship) => ({
-    id: relationship.id,
-    from: relationship.source,
-    to: relationship.target,
-    label: relationship.type,
-    arrows: "to",
-    font: { size: 10, align: "middle" },
-    color: "#8b97aa",
-  }));
+  const edges = payload.relationships
+    .filter((relationship) => visibleNodeIds.has(relationship.source) && visibleNodeIds.has(relationship.target))
+    .map((relationship) => ({
+      id: relationship.id,
+      from: relationship.source,
+      to: relationship.target,
+      label: relationship.type,
+      arrows: "to",
+      font: { size: 10, align: "middle" },
+      color: "#8b97aa",
+    }));
 
-  new vis.Network(
+  network = new vis.Network(
     graphElement,
     { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) },
     {
@@ -78,6 +99,26 @@ function renderGraph(payload) {
   );
 
   graphStatus.textContent = `${nodes.length} noeuds, ${edges.length} relations`;
+}
+
+function renderGraphFilters(payload) {
+  const labels = [...new Set(payload.nodes.map((node) => node.labels[0] || "Node"))].sort();
+  graphFiltersElement.replaceChildren();
+  labels.forEach((label) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = visibleLabels.has(label) ? "filter active" : "filter";
+    button.textContent = label;
+    button.addEventListener("click", () => {
+      if (visibleLabels.has(label)) {
+        visibleLabels.delete(label);
+      } else {
+        visibleLabels.add(label);
+      }
+      renderGraph(fullGraphPayload);
+    });
+    graphFiltersElement.appendChild(button);
+  });
 }
 
 function item(title, meta, level = "") {
@@ -107,9 +148,13 @@ async function loadDashboard() {
     services,
     identityRisks,
     recommendations,
+    executiveSummary,
+    riskMatrix,
     queryCatalog,
     queryResults,
     segmentation,
+    deliverables,
+    diagnostics,
   ] = await Promise.all([
     api("/api/graph"),
     api("/api/stats"),
@@ -120,13 +165,19 @@ async function loadDashboard() {
     api("/api/exposed-services"),
     api("/api/identity-risks"),
     api("/api/recommendations"),
+    api("/api/executive-summary"),
+    api("/api/risk-matrix"),
     api("/api/query-catalog"),
     api("/api/query-results"),
     api("/api/segmentation-plan"),
+    api("/api/deliverables"),
+    api("/api/diagnostics"),
   ]);
 
+  renderExecutiveSummary(executiveSummary);
   renderGraph(graph);
   renderStats(stats);
+  renderDiagnostics(diagnostics);
   renderList(pathsElement, paths.paths, "Aucun chemin trouve", (row) =>
     item(
       `${escapeHtml(row.target)} <span class="badge">${escapeHtml(row.criticality)}</span>`,
@@ -188,6 +239,20 @@ async function loadDashboard() {
   renderQueryCatalog(queryCatalog.queries);
   renderQueryResults(queryResults.results);
   renderSegmentation(segmentation);
+  renderRiskMatrix(riskMatrix.machines);
+  renderDeliverables(deliverables.items);
+}
+
+async function bootstrapAndLoad() {
+  graphStatus.textContent = "Connexion a Neo4j";
+  try {
+    const result = await api("/api/bootstrap", { method: "POST" });
+    graphStatus.textContent = result.loaded ? "Graphe charge automatiquement" : "Graphe deja charge";
+    await loadDashboard();
+  } catch (error) {
+    graphStatus.textContent = error.message;
+    renderEmptyState(error.message);
+  }
 }
 
 function renderStats(stats) {
@@ -205,6 +270,68 @@ function renderStats(stats) {
   });
 }
 
+function renderDiagnostics(diagnostics) {
+  diagnosticsElement.innerHTML = `
+    <span class="${diagnostics.ready ? "ok" : "warning"}">${diagnostics.ready ? "Pret" : "Vide"}</span>
+    <span>Neo4j: ${escapeHtml(diagnostics.uri)}</span>
+    <span>Noeuds: ${diagnostics.counts.nodes}</span>
+    <span>Relations: ${diagnostics.counts.relationships}</span>
+  `;
+}
+
+function renderExecutiveSummary(summary) {
+  const cards = [
+    ["Machine compromise", summary.compromisedMachine],
+    ["Chemin principal", summary.mainAttackPath],
+    ["Actifs critiques", summary.criticalAssets.join(", ")],
+    ["Statut", summary.status],
+  ];
+  executiveSummaryElement.replaceChildren();
+  cards.forEach(([title, value]) => {
+    const card = document.createElement("article");
+    card.className = "summary-card";
+    card.innerHTML = `<span>${escapeHtml(title)}</span><strong>${escapeHtml(value)}</strong>`;
+    executiveSummaryElement.appendChild(card);
+  });
+  const riskCard = document.createElement("article");
+  riskCard.className = "summary-card summary-card-wide";
+  riskCard.innerHTML = `<span>Risques principaux</span><ul>${summary.mainRisks
+    .map((risk) => `<li>${escapeHtml(risk)}</li>`)
+    .join("")}</ul>`;
+  executiveSummaryElement.appendChild(riskCard);
+}
+
+function renderRiskMatrix(machines) {
+  riskMatrixElement.replaceChildren();
+  machines.forEach((machine) => {
+    const card = document.createElement("article");
+    card.className = `risk-card ${machine.criticality}`;
+    card.innerHTML = `
+      <div class="risk-score">${machine.riskScore}</div>
+      <strong>${escapeHtml(machine.machine)}</strong>
+      <span>${escapeHtml(machine.type)} - ${escapeHtml(machine.criticality)}</span>
+      <p>Vulnerabilites: ${machine.vulnerabilityCount} | Score max: ${machine.maxVulnerabilityScore}</p>
+      <p>Services: ${escapeHtml(machine.services.filter(Boolean).join(", ") || "aucun")}</p>
+      <p>Ressources: ${escapeHtml(machine.resources.filter(Boolean).join(", ") || "aucune")}</p>
+    `;
+    riskMatrixElement.appendChild(card);
+  });
+}
+
+function renderDeliverables(items) {
+  deliverablesElement.replaceChildren();
+  items.forEach((entry) => {
+    const card = document.createElement("article");
+    card.className = "deliverable";
+    card.innerHTML = `
+      <strong>${escapeHtml(entry.name)}</strong>
+      <span>${escapeHtml(entry.status)}</span>
+      <code>${escapeHtml(entry.file)}</code>
+    `;
+    deliverablesElement.appendChild(card);
+  });
+}
+
 function renderQueryCatalog(queries) {
   queryCatalogElement.replaceChildren();
   queries.forEach((query) => {
@@ -213,9 +340,19 @@ function renderQueryCatalog(queries) {
     article.innerHTML = `
       <strong>${escapeHtml(query.title)}</strong>
       <pre><code>${escapeHtml(query.query)}</code></pre>
+      <button class="copy-query" type="button" data-query="${escapeHtml(query.query)}">Copier la requete</button>
       <p>${escapeHtml(query.comment)}</p>
     `;
     queryCatalogElement.appendChild(article);
+  });
+  queryCatalogElement.querySelectorAll(".copy-query").forEach((button) => {
+    button.addEventListener("click", async () => {
+      await navigator.clipboard.writeText(button.dataset.query);
+      button.textContent = "Copie";
+      setTimeout(() => {
+        button.textContent = "Copier la requete";
+      }, 1200);
+    });
   });
 }
 
@@ -265,12 +402,12 @@ async function exportDashboard() {
 
 seedButton.addEventListener("click", async () => {
   seedButton.disabled = true;
-  seedButton.textContent = "Chargement...";
-  graphStatus.textContent = "Creation du graphe";
+  seedButton.textContent = "Rechargement...";
+  graphStatus.textContent = "Recreation du graphe";
   try {
     await api("/api/seed", { method: "POST" });
     await loadDashboard();
-    seedButton.textContent = "Graphe charge";
+    seedButton.textContent = "Graphe recharge";
   } catch (error) {
     graphStatus.textContent = error.message;
     seedButton.textContent = "Reessayer";
@@ -285,8 +422,11 @@ exportButton.addEventListener("click", () => {
   });
 });
 
-loadDashboard().catch((error) => {
-  graphStatus.textContent = error.message;
+function renderEmptyState(message = "Graphe non charge") {
+  statsElement.replaceChildren();
+  diagnosticsElement.innerHTML = `<span class="warning">Base non chargee</span>`;
+  graphElement.replaceChildren();
+  graphStatus.textContent = message;
   renderList(pathsElement, [], "Graphe non charge", () => null);
   renderList(vulnerabilitiesElement, [], "Graphe non charge", () => null);
   renderList(resourcesElement, [], "Graphe non charge", () => null);
@@ -296,4 +436,10 @@ loadDashboard().catch((error) => {
   queryCatalogElement.replaceChildren();
   queryResultsElement.replaceChildren();
   segmentationElement.replaceChildren();
-});
+  executiveSummaryElement.replaceChildren();
+  riskMatrixElement.replaceChildren();
+  deliverablesElement.replaceChildren();
+  graphFiltersElement.replaceChildren();
+}
+
+bootstrapAndLoad();

@@ -18,6 +18,7 @@ CYPHER_DIR = BASE_DIR / "cypher"
 NEO4J_URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")
 NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
 NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "cybercorp123")
+AUTO_SEED = os.getenv("AUTO_SEED", "true").lower() in {"1", "true", "yes", "on"}
 
 driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
 
@@ -64,6 +65,8 @@ ANALYSIS_QUERIES = [
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     wait_for_neo4j()
+    if AUTO_SEED:
+        ensure_graph_loaded()
     yield
     driver.close()
 
@@ -101,10 +104,37 @@ def run_cypher_file(path: Path) -> None:
             session.run(statement)
 
 
+def graph_counts() -> dict[str, int]:
+    rows = run_query(
+        """
+        MATCH (n)
+        WITH count(n) AS nodes
+        MATCH ()-[r]->()
+        RETURN nodes, count(r) AS relationships
+        """
+    )
+    if not rows:
+        return {"nodes": 0, "relationships": 0}
+    return {"nodes": rows[0]["nodes"], "relationships": rows[0]["relationships"]}
+
+
+def ensure_graph_loaded(force: bool = False) -> dict[str, Any]:
+    before = graph_counts()
+    loaded = False
+    if force or before["nodes"] == 0:
+        run_cypher_file(CYPHER_DIR / "01_constraints.cypher")
+        run_cypher_file(CYPHER_DIR / "02_seed_graph.cypher")
+        loaded = True
+    after = graph_counts()
+    return {"loaded": loaded, "before": before, "after": after}
+
+
 def collect_dashboard_data() -> dict[str, Any]:
     return {
+        "executiveSummary": executive_summary(),
         "stats": stats(),
         "graph": graph(),
+        "riskMatrix": risk_matrix(),
         "attackPaths": attack_paths(),
         "shortestPaths": shortest_paths(),
         "vulnerableMachines": vulnerable_machines(),
@@ -113,6 +143,7 @@ def collect_dashboard_data() -> dict[str, Any]:
         "identityRisks": identity_risks(),
         "recommendations": recommendations(),
         "segmentation": segmentation_plan(),
+        "deliverables": deliverables(),
         "queryCatalog": query_catalog(),
     }
 
@@ -125,15 +156,44 @@ def index() -> FileResponse:
 @app.get("/api/health")
 def health() -> dict[str, str]:
     run_query("RETURN 1 AS ok")
-    return {"status": "ok"}
+    return {"status": "ok", "uri": NEO4J_URI}
+
+
+@app.get("/api/diagnostics")
+def diagnostics() -> dict[str, Any]:
+    counts = graph_counts()
+    sample = run_query(
+        """
+        MATCH (n)
+        RETURN labels(n) AS labels, coalesce(n.name, n.cve) AS name
+        ORDER BY name
+        LIMIT 10
+        """
+    )
+    return {
+        "neo4j": "connected",
+        "uri": NEO4J_URI,
+        "autoSeed": AUTO_SEED,
+        "counts": counts,
+        "sample": sample,
+        "ready": counts["nodes"] > 0 and counts["relationships"] > 0,
+    }
 
 
 @app.post("/api/seed")
 def seed_graph() -> dict[str, str]:
     try:
-        run_cypher_file(CYPHER_DIR / "01_constraints.cypher")
-        run_cypher_file(CYPHER_DIR / "02_seed_graph.cypher")
-        return {"status": "loaded"}
+        result = ensure_graph_loaded(force=True)
+        return {"status": "loaded", **result}
+    except Neo4jError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.post("/api/bootstrap")
+def bootstrap_graph() -> dict[str, Any]:
+    try:
+        result = ensure_graph_loaded(force=False)
+        return {"status": "ok", **result}
     except Neo4jError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -164,6 +224,49 @@ def stats() -> dict[str, Any]:
         "totalNodes": sum(row["total"] for row in node_counts),
         "totalRelationships": sum(row["total"] for row in rel_counts),
     }
+
+
+@app.get("/api/executive-summary")
+def executive_summary() -> dict[str, Any]:
+    counts = graph_counts()
+    return {
+        "title": "Analyse des chemins d'attaque CyberCorp",
+        "compromisedMachine": "PC-ALICE",
+        "mainAttackPath": "PC-ALICE -> SRV-WEB -> SRV-DB -> DC-01",
+        "criticalAssets": ["Active Directory", "Sauvegardes", "Secrets applicatifs"],
+        "mainRisks": [
+            "Deplacement lateral possible depuis un poste utilisateur vers des serveurs critiques.",
+            "SRV-WEB expose des services web et porte des vulnerabilites critiques.",
+            "SRV-DB concentre des donnees sensibles et ouvre un chemin vers DC-01 et NAS-BACKUP.",
+            "Les droits des groupes DEV et ADMINS doivent etre reduits.",
+        ],
+        "status": "pret" if counts["nodes"] else "base vide",
+    }
+
+
+@app.get("/api/risk-matrix")
+def risk_matrix() -> dict[str, list[dict[str, Any]]]:
+    rows = run_query(
+        """
+        MATCH (m:Machine)
+        OPTIONAL MATCH (m)-[:HAS_VULNERABILITY]->(v:Vulnerability)
+        OPTIONAL MATCH (m)-[:HOSTS]->(r:Resource)
+        OPTIONAL MATCH (m)-[:EXPOSES]->(s:Service)
+        RETURN
+          m.name AS machine,
+          m.type AS type,
+          m.criticality AS criticality,
+          m.riskScore AS riskScore,
+          count(DISTINCT v) AS vulnerabilityCount,
+          coalesce(max(v.score), 0) AS maxVulnerabilityScore,
+          count(DISTINCT r) AS hostedResources,
+          collect(DISTINCT r.name) AS resources,
+          count(DISTINCT s) AS exposedServices,
+          collect(DISTINCT s.name) AS services
+        ORDER BY riskScore DESC
+        """
+    )
+    return {"machines": rows}
 
 
 @app.get("/api/graph")
@@ -311,6 +414,23 @@ def recommendations() -> dict[str, list[str]]:
             "Desactiver les services inutiles et surveiller RDP, SMB, SSH, MongoDB, HTTP et HTTPS.",
             "Activer MFA sur les comptes administrateurs.",
             "Mettre en place une supervision des chemins d'attaque et des connexions laterales.",
+        ]
+    }
+
+
+@app.get("/api/deliverables")
+def deliverables() -> dict[str, list[dict[str, str]]]:
+    return {
+        "items": [
+            {"name": "Graphe Neo4j", "status": "pret", "file": "cypher/02_seed_graph.cypher"},
+            {"name": "Contraintes Neo4j", "status": "pret", "file": "cypher/01_constraints.cypher"},
+            {"name": "Requetes d'analyse", "status": "pret", "file": "cypher/03_analysis_queries.cypher"},
+            {"name": "Rapport cyber", "status": "pret", "file": "reports/analyse_cyber.md"},
+            {"name": "Resultats de requetes", "status": "pret", "file": "reports/resultats_requetes.md"},
+            {"name": "Presentation orale", "status": "pret", "file": "reports/presentation_orale.md"},
+            {"name": "Import CSV bonus", "status": "pret", "file": "data/nodes.csv + data/relationships.csv"},
+            {"name": "Application web", "status": "pret", "file": "app/"},
+            {"name": "Docker Compose", "status": "pret", "file": "docker-compose.yml"},
         ]
     }
 
