@@ -104,7 +104,7 @@ Resultat attendu :
 
 Commentaire : les ressources critiques sont atteignables depuis `PC-ALICE`, ce qui montre un probleme de segmentation.
 
-## 6. Utilisateurs et groupes a risque
+## 6. Utilisateurs et groupes à risque
 
 Requete :
 

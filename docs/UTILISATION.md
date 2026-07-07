@@ -1,6 +1,6 @@
 # Utilisation de l'application
 
-## Prerequis
+## Prérequis
 
 - Docker Desktop lance
 - Git

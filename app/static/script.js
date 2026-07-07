@@ -1,3 +1,5 @@
+// Définition des variables
+
 const graphElement = document.querySelector("#graph");
 const graphStatus = document.querySelector("#graph-status");
 const seedButton = document.querySelector("#seed-button");

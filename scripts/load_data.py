@@ -3,7 +3,6 @@ from pathlib import Path
 
 from neo4j import GraphDatabase
 
-
 BASE_DIR = Path(__file__).resolve().parent.parent
 CYPHER_DIR = BASE_DIR / "cypher"
 

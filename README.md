@@ -32,7 +32,7 @@ Password: cybercorp123
 
 L'application charge automatiquement le graphe si Neo4j est vide. Le bouton **Recharger le graphe** permet de recreer les donnees.
 
-## Fonctionnalites de l'application
+## Fonctionnalités de l'application
 
 - visualisation interactive du graphe ;
 - filtres par type de noeud ;

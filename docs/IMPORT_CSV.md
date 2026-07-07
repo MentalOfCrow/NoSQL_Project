@@ -10,7 +10,7 @@ Ce projet propose deux methodes de creation du graphe :
 - `data/nodes.csv` : utilisateurs, machines, services, vulnerabilites, groupes, ressources.
 - `data/relationships.csv` : relations `USES`, `MEMBER_OF`, `ADMIN_OF`, `CONNECTED_TO`, `EXPOSES`, `HAS_VULNERABILITY`, `HAS_ACCESS_TO`, `HOSTS`.
 
-## Lancement
+## Lancement init
 
 Neo4j doit etre demarre :
 

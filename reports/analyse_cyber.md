@@ -1,6 +1,6 @@
 # Rapport d'analyse cyber - CyberCorp
 
-## 1. Presentation du systeme d'information modelise
+## 1. Présentation du systeme d'information modelise
 
 Le systeme d'information CyberCorp est represente sous forme de graphe Neo4j. Le modele contient six types de noeuds : `User`, `Machine`, `Group`, `Service`, `Vulnerability` et `Resource`.
 

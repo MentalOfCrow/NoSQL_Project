@@ -1,6 +1,6 @@
 # Recette fonctionnelle
 
-## Verification du lancement
+## Verification du lancement init
 
 Commande :
 

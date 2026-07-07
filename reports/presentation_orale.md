@@ -8,7 +8,7 @@ Machine compromise : `PC-ALICE`.
 
 Problematique : a partir de `PC-ALICE`, quels chemins permettent d'atteindre les ressources critiques ?
 
-## 2. Modele de graphe
+## 2. Modèle de graphe
 
 Noeuds utilises :
 
